@@ -14,11 +14,32 @@ const port = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
+}
+
 // Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadsDir);
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname));
+  },
+});
+
 const upload = multer({
-  dest: "uploads/",
+  storage: storage,
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: function (req, file, cb) {
+    if (!file.originalname.match(/\.(mp3|wav|m4a|webm)$/)) {
+      return cb(new Error("Only audio files are allowed!"), false);
+    }
+    cb(null, true);
   },
 });
 
@@ -172,10 +193,14 @@ app.post("/api/identify-verse", upload.single("audio"), async (req, res) => {
       return res.status(400).json({ error: "No audio file provided" });
     }
 
+    console.log("Received audio file:", req.file.path);
+
     // Step 1: Convert audio to text using OpenAI's Whisper API
     const formData = new FormData();
     formData.append("file", fs.createReadStream(req.file.path));
     formData.append("model", "whisper-1");
+
+    console.log("Sending to OpenAI Whisper API...");
 
     const transcriptionResponse = await axios.post(
       "https://api.openai.com/v1/audio/transcriptions",
@@ -188,6 +213,7 @@ app.post("/api/identify-verse", upload.single("audio"), async (req, res) => {
       }
     );
 
+    console.log("Received transcription:", transcriptionResponse.data.text);
     const transcribedText = transcriptionResponse.data.text;
 
     // Step 2: Use GPT to identify the verse
@@ -215,10 +241,12 @@ app.post("/api/identify-verse", upload.single("audio"), async (req, res) => {
     );
 
     const verseIdentification = verseResponse.data.choices[0].message.content;
+    console.log("Verse identification:", verseIdentification);
 
     // Step 3: Extract Surah name from verse identification
     const surahMatch = verseIdentification.match(/Surah\s+([^,]+)/i);
     const surahName = surahMatch ? surahMatch[1].trim() : null;
+    console.log("Extracted surah name:", surahName);
 
     // Step 4: Get Kabah recitation videos
     let videos = [];
@@ -246,7 +274,12 @@ app.post("/api/identify-verse", upload.single("audio"), async (req, res) => {
     }
 
     // Step 5: Clean up the uploaded file
-    fs.unlinkSync(req.file.path);
+    try {
+      fs.unlinkSync(req.file.path);
+      console.log("Cleaned up audio file:", req.file.path);
+    } catch (error) {
+      console.error("Error cleaning up file:", error);
+    }
 
     // Response
     res.json({
@@ -255,8 +288,19 @@ app.post("/api/identify-verse", upload.single("audio"), async (req, res) => {
       videos,
     });
   } catch (error) {
-    console.error("Error:", error.message);
-    res.status(500).json({ error: "Something went wrong." });
+    console.error("Detailed error:", error);
+    // Clean up file if it exists
+    if (req.file && req.file.path) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (cleanupError) {
+        console.error("Error cleaning up file:", cleanupError);
+      }
+    }
+    res.status(500).json({
+      error: "Something went wrong.",
+      details: error.message,
+    });
   }
 });
 
