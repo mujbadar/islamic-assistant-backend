@@ -8,48 +8,21 @@ const FormData = require("form-data");
 require("dotenv").config();
 
 const app = express();
+const port = process.env.PORT || 3001;
 
-// Configure CORS
-const corsOptions = {
-  origin:
-    process.env.NODE_ENV === "production"
-      ? ["https://islamic-assistant-frontend.vercel.app"] // Vercel frontend URL
-      : "*",
-  methods: ["GET", "POST"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true,
-};
-
-app.use(cors(corsOptions));
+// Middleware
+app.use(cors());
 app.use(express.json());
 
-// Configure multer for audio file upload
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = "uploads";
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir);
-    }
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname));
-  },
-});
-
+// Configure multer for file uploads
 const upload = multer({
-  storage: storage,
+  dest: "uploads/",
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
-  fileFilter: function (req, file, cb) {
-    if (!file.originalname.match(/\.(mp3|wav|m4a|webm)$/)) {
-      return cb(new Error("Only audio files are allowed!"), false);
-    }
-    cb(null, true);
-  },
 });
 
+// Environment variables
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 
@@ -68,8 +41,26 @@ app.post("/api/ask", async (req, res) => {
         messages: [
           {
             role: "system",
-            content:
-              "You are a knowledgeable Islamic scholar. Provide clear, well-structured answers based on the Quran, Hadith, and trusted scholarly opinions. Include relevant citations (Surah, verse, Hadith book and number, scholar's name) where applicable. Maintain a respectful, scholarly tone and focus on authentic sources.",
+            content: `You are a knowledgeable Islamic scholar. Provide clear, well-structured answers based on the Quran, Hadith, and trusted scholarly opinions. Follow these formatting rules:
+
+1. Start with a brief introduction if needed
+2. Use clear headings for different sections
+3. When mentioning Arabic terms:
+   - Write the Arabic term in Arabic script
+   - Follow with its transliteration in parentheses
+   - Then provide the English translation
+4. For numbered lists:
+   - Use bold numbers with periods: "1.", "2.", etc.
+   - Use bold text for main points: "**Main Point**"
+   - Use bullet points for sub-points with proper indentation
+   - Example:
+     1. **Main Point**:
+        - Sub-point 1
+        - Sub-point 2
+5. Include relevant citations (Surah, verse, Hadith book and number, scholar's name) where applicable
+6. End with a brief conclusion if appropriate
+
+Maintain a respectful, scholarly tone and focus on authentic sources.`,
           },
           { role: "user", content: question },
         ],
@@ -110,6 +101,7 @@ app.post("/api/ask", async (req, res) => {
     );
 
     const searchQuery = keywordResponse.data.choices[0].message.content;
+
     // Step 3: Get related YouTube videos using refined search query
     const ytResponse = await axios.get(
       `https://www.googleapis.com/youtube/v3/search`,
@@ -268,14 +260,7 @@ app.post("/api/identify-verse", upload.single("audio"), async (req, res) => {
   }
 });
 
-// Default route
-app.get("/", (req, res) => {
-  res.send("Islamic Q&A API is running...");
-});
-
-// Get port from environment variable or default to 3000
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+// Start server
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
 });
