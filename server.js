@@ -8,7 +8,22 @@ const FormData = require("form-data");
 require("dotenv").config();
 
 const app = express();
-app.use(cors());
+
+// Configure CORS
+const corsOptions = {
+  origin:
+    process.env.NODE_ENV === "production"
+      ? [
+          "https://islamic-assistant-frontend.vercel.app",
+          "https://mujbadar.github.io",
+        ] // Add your frontend URLs here
+      : "*",
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Configure multer for audio file upload
@@ -248,16 +263,11 @@ app.post("/api/identify-verse", upload.single("audio"), async (req, res) => {
     res.json({
       transcribedText,
       verseIdentification,
-      confidence: "high",
       videos,
     });
   } catch (error) {
     console.error("Error:", error.message);
-    // Clean up the uploaded file in case of error
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
-    res.status(500).json({ error: "Error processing audio file" });
+    res.status(500).json({ error: "Something went wrong." });
   }
 });
 
@@ -266,6 +276,9 @@ app.get("/", (req, res) => {
   res.send("Islamic Q&A API is running...");
 });
 
-// Start Server
-const PORT = 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Get port from environment variable or default to 3000
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
