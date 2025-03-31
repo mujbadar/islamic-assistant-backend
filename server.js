@@ -13,10 +13,7 @@ const app = express();
 const corsOptions = {
   origin:
     process.env.NODE_ENV === "production"
-      ? [
-          "https://islamic-assistant-frontend.vercel.app",
-          "https://mujbadar.github.io",
-        ] // Add your frontend URLs here
+      ? ["https://islamic-assistant-frontend.vercel.app"] // Vercel frontend URL
       : "*",
   methods: ["GET", "POST"],
   allowedHeaders: ["Content-Type", "Authorization"],
