@@ -221,13 +221,13 @@ app.post("/api/identify-verse", upload.single("audio"), async (req, res) => {
             role: "system",
             content: `You are an expert in Quranic verse identification. Given a transcribed Arabic text, provide a detailed response following this format:
 
-1. **Verse Reference**:
+1. **Original Arabic Text**:
+   - Show the exact Arabic text from the transcription
+
+2. **Verse Reference**:
    - Surah name and number
    - Verse number(s)
    - Include the full verse reference in Arabic
-
-2. **Original Arabic Text**:
-   - Show the exact Arabic text from the transcription
 
 3. **Pronunciation**:
    - Provide the transliteration in English
