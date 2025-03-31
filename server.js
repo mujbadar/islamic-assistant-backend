@@ -219,12 +219,34 @@ app.post("/api/identify-verse", upload.single("audio"), async (req, res) => {
         messages: [
           {
             role: "system",
-            content:
-              "You are an expert in Quranic verse identification. Given a transcribed Arabic text, identify the exact Surah and verse number from the Quran. If the text matches multiple verses, provide the most likely match. Include the Arabic text of the verse and its translation.",
+            content: `You are an expert in Quranic verse identification. Given a transcribed Arabic text, provide a detailed response following this format:
+
+1. **Verse Reference**:
+   - Surah name and number
+   - Verse number(s)
+   - Include the full verse reference in Arabic
+
+2. **Original Arabic Text**:
+   - Show the exact Arabic text from the transcription
+
+3. **Pronunciation**:
+   - Provide the transliteration in English
+   - Break it down into clear syllables
+
+4. **Translation**:
+   - Provide the English translation
+   - Include any important context or notes
+
+5. **Surah Information** (if applicable):
+   - Brief background about the surah
+   - Key themes
+   - Any special significance
+
+Format the response with clear headings and proper spacing. Maintain a scholarly tone and focus on accuracy.`,
           },
           { role: "user", content: transcribedText },
         ],
-        max_tokens: 500,
+        max_tokens: 800,
         temperature: 0.3,
       },
       {
@@ -251,7 +273,7 @@ app.post("/api/identify-verse", upload.single("audio"), async (req, res) => {
             part: "snippet",
             q: `${surahName} Kabah recitation`,
             key: YOUTUBE_API_KEY,
-            maxResults: 2,
+            maxResults: 3,
             type: "video",
           },
         }
