@@ -37,7 +37,7 @@ Maintain a respectful, scholarly tone and focus on authentic sources.`,
           },
           { role: "user", content: question },
         ],
-        max_tokens: 800,
+        max_tokens: 1000,
         temperature: 0.3,
       },
       {
